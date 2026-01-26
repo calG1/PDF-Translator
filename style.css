@@ -226,6 +226,27 @@ select:focus {
     font-size: 0.75rem;
     color: var(--text-muted);
     opacity: 0.7;
+    margin-bottom: 1rem;
+}
+
+/* Text Layer */
+.text-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* Allow clicks to pass through if needed, though selection triggers file input now? No, dropped on dropzone */
+}
+
+.text-item {
+    position: absolute;
+    white-space: nowrap;
+    transform-origin: 0% 0%;
+    /* Scale from top-left */
+    line-height: 1;
+    pointer-events: none;
 }
 
 /* Upload Area */
@@ -267,6 +288,118 @@ select:focus {
 .upload-area p {
     font-size: 0.85rem;
     color: var(--text-muted);
+}
+
+/* File List */
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+    /* margin-top managed by spacing or flow */
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.8rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.file-item:hover {
+    border-color: var(--primary);
+}
+
+.file-item.active {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex: 1;
+    overflow: hidden;
+}
+
+.file-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.file-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    overflow: hidden;
+}
+
+.file-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-status {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.file-remove {
+    padding: 0.4rem;
+    color: var(--text-muted);
+    border-radius: 4px;
+    transition: all 0.2s;
+    margin-left: 0.5rem;
+    display: flex;
+}
+
+.file-remove:hover {
+    background: rgba(255, 0, 0, 0.1);
+    color: var(--error);
+}
+
+.file-ocr-toggle {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-right: 0.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.file-ocr-toggle:hover {
+    border-color: var(--primary);
+    color: var(--text-main);
+}
+
+.file-ocr-toggle.enabled {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.file-ocr-toggle.disabled-btn {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 /* Buttons */
@@ -372,7 +505,7 @@ select:focus {
 
 .text-item {
     position: absolute;
-    white-space: pre;
+    white-space: nowrap;
     cursor: text;
     pointer-events: auto;
     background-color: white;

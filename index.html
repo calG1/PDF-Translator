@@ -48,6 +48,7 @@
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- OCR Library -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
 
@@ -188,12 +189,16 @@
                 </div>
 
                 <div class="upload-area" id="dropZone">
-                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                    <input type="file" id="fileInput" accept=".pdf" multiple hidden>
                     <div class="upload-content">
                         <i data-lucide="upload-cloud" class="upload-icon"></i>
                         <h3>Drop PDF here</h3>
                         <p>or click to browse library</p>
                     </div>
+                </div>
+
+                <div id="fileList" class="file-list">
+                    <!-- Files will be added here -->
                 </div>
 
                 <button id="translateBtn" class="btn btn-primary" disabled>
@@ -203,8 +208,9 @@
 
                 <button id="downloadBtn" class="btn btn-secondary" style="display: none;">
                     <i data-lucide="download"></i>
-                    <span>Download Result</span>
+                    <span>Download All</span>
                 </button>
+
 
                 <div class="status-log" id="statusLog"></div>
             </aside>
