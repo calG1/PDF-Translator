@@ -25,6 +25,11 @@ const geminiInstructions = document.getElementById('geminiInstructions');
 const googleInstructions = document.getElementById('googleInstructions');
 const themeToggle = document.getElementById('themeToggle');
 const themeIcon = document.getElementById('themeIcon');
+// Progress Elements (Generic for OCR and Translation)
+const progressContainer = document.getElementById('progressContainer');
+const progressStatusText = document.getElementById('progressStatusText');
+const progressBar = document.getElementById('progressBar');
+const progressPercentage = document.getElementById('progressPercentage');
 
 // Event Listeners
 dropZone.addEventListener('click', () => fileInput.click());
@@ -122,7 +127,7 @@ async function loadPDF(file) {
         state.filename = file.name;
         emptyState.style.display = 'none';
         pdfContainer.innerHTML = ''; // Clear previous
-        translateBtn.disabled = true;
+        translateBtn.disabled = true; // Disable until loaded/OCR done
 
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
@@ -130,14 +135,37 @@ async function loadPDF(file) {
 
         log(`PDF Loaded. Pages: ${state.pdfDoc.numPages}`);
 
+        // Check if OCR is enabled
+        const useOCR = document.getElementById('ocrToggle').checked;
+        if (useOCR) {
+            progressContainer.style.display = 'block';
+            progressStatusText.textContent = "Starting OCR...";
+            progressBar.style.width = '0%';
+            progressPercentage.textContent = '0%';
+            translateBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Processing OCR...`;
+        } else {
+            progressContainer.style.display = 'none';
+        }
+
         await renderAllPages();
 
         translateBtn.disabled = false;
+        translateBtn.innerHTML = `<i data-lucide="sparkles"></i> <span>Translate PDF</span>`;
+        lucide.createIcons();
+        if (useOCR) {
+            progressContainer.style.display = 'none';
+            log('OCR Complete for all pages.');
+        }
+
         log('Ready to translate.');
     } catch (err) {
         console.error(err);
         log('Error loading PDF: ' + err.message);
         alert('Failed to load PDF.');
+        translateBtn.disabled = false; // Re-enable on error just in case
+        translateBtn.innerHTML = `<i data-lucide="sparkles"></i> <span>Translate PDF</span>`;
+        progressContainer.style.display = 'none';
+        lucide.createIcons();
     }
 }
 
@@ -184,6 +212,15 @@ async function renderPage(pageNum) {
     if (useOCR) {
         log(`Running OCR on page ${pageNum}... (this takes a moment)`);
 
+        // Update Progress UI for Page Start
+        const totalPages = state.pdfDoc.numPages;
+        progressStatusText.textContent = `OCR Page ${pageNum} of ${totalPages}`;
+        // Base progress for starting the page
+        const baseProgress = ((pageNum - 1) / totalPages) * 100;
+        progressBar.style.width = `${baseProgress}%`;
+        progressPercentage.textContent = `${Math.round(baseProgress)}%`;
+
+
         // Tesseract needs an image. Canvas is ready.
         const imgData = canvas.toDataURL('image/jpeg', 0.8);
 
@@ -197,7 +234,14 @@ async function renderPage(pageNum) {
                 {
                     logger: m => {
                         if (m.status === 'recognizing text') {
-                            // Optional: Progress update
+                            // Progress within page (0 to 1)
+                            const pageProgress = m.progress;
+                            // Map 0-1 to share of total totalPages
+                            // Total progress = baseProgress + (pageProgress * (100/totalPages))
+                            const currentTotalProgress = baseProgress + (pageProgress * (100 / totalPages));
+
+                            progressBar.style.width = `${currentTotalProgress}%`;
+                            progressPercentage.textContent = `${Math.round(currentTotalProgress)}%`;
                         }
                     }
                 }
@@ -365,6 +409,12 @@ async function translatePDF() {
     translateBtn.disabled = true;
     translateBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Translating...`;
 
+    // Show progress container
+    progressContainer.style.display = 'block';
+    progressStatusText.textContent = "Starting Translation...";
+    progressBar.style.width = '0%';
+    progressPercentage.textContent = '0%';
+
     // Auto-detect provider if key mismatch
     if (state.apiKey) {
         if (state.apiKey.startsWith('AIza')) {
@@ -402,8 +452,16 @@ async function translatePDF() {
         log(`Starting translation (Provider: ${provider})...`);
 
         // Collect all text to process efficiently
-        for (let i = 0; i < state.pages.length; i++) {
-            log(`Translating page ${i + 1}/${state.pages.length}...`);
+        const totalPages = state.pages.length;
+        for (let i = 0; i < totalPages; i++) {
+            log(`Translating page ${i + 1}/${totalPages}...`);
+
+            // Update Progress
+            const pct = Math.round(((i) / totalPages) * 100);
+            progressBar.style.width = `${pct}%`;
+            progressPercentage.textContent = `${pct}%`;
+            progressStatusText.textContent = `Translating Page ${i + 1} of ${totalPages}`;
+
             const pageItems = state.pages[i];
 
             // Extract strings
@@ -449,15 +507,29 @@ async function translatePDF() {
                     }
                 }
             });
+
+            // End of page success, bump progress slightly visually?
+            // Or just wait for next iteration
         }
+
+        // Finalize 100%
+        progressBar.style.width = '100%';
+        progressPercentage.textContent = '100%';
+        progressStatusText.textContent = "Translation Complete!";
 
         log('Translation complete!');
         downloadBtn.style.display = 'flex';
+
+        // Hide progress after a short delay
+        setTimeout(() => {
+            progressContainer.style.display = 'none';
+        }, 2000);
 
     } catch (err) {
         console.error(err);
         log('Translation failed: ' + err.message);
         alert('Translation failed. Check console for details.');
+        progressContainer.style.display = 'none';
     } finally {
         translateBtn.disabled = false;
         translateBtn.innerHTML = `<i data-lucide="sparkles"></i> <span>Translate PDF</span>`;
