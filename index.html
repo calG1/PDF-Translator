@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Localizer | PDF Transformation</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- OCR Library -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="app-container glass-panel">
+        <header>
+            <div class="brand-container" style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <div class="brand">
+                    <i data-lucide="languages" class="brand-icon"></i>
+                    <h1>PDF Localizer</h1>
+                </div>
+                <p class="tagline">Maintain your layout. Transform your language.</p>
+            </div>
+
+            <button id="themeToggle" class="btn-icon" aria-label="Toggle Theme"
+                style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.6rem; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="moon" id="themeIcon"></i>
+            </button>
+        </header>
+
+        <main>
+            <!-- Controls Sidebar -->
+            <aside class="controls-panel">
+                <div class="control-group">
+                    <label>
+                        <i data-lucide="cpu" class="icon-sm"></i>
+                        AI Provider
+                    </label>
+                    <select id="providerSelect">
+                        <option value="free">Free (MyMemory API)</option>
+                        <option value="openai">OpenAI (Broad Knowledge)</option>
+                        <option value="gemini">Google Gemini (Fast)</option>
+                        <option value="google">Google Cloud (Official)</option>
+                    </select>
+                </div>
+
+                <div class="control-group"
+                    style="flex-direction: row; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px;">
+                    <label style="margin:0; cursor:pointer;" for="ocrToggle">
+                        <i data-lucide="scan-line" class="icon-sm"></i>
+                        Enable OCR
+                        <span style="font-size:0.7em; opacity:0.7; display:block; font-weight:normal;">For scanned
+                            docs</span>
+                    </label>
+                    <input type="checkbox" id="ocrToggle" style="width:auto;">
+                </div>
+
+                <div class="control-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label>
+                            <i data-lucide="key" class="icon-sm"></i>
+                            API Key
+                        </label>
+                        <button id="helpBtn" class="btn-text"
+                            style="background:none; border:none; color:var(--primary); font-size:0.8rem; cursor:pointer; text-decoration: underline;">
+                            Where do I get this?
+                        </button>
+                    </div>
+                    <input type="password" id="apiKey" placeholder="Paste your API key here" autocomplete="off">
+
+                    <div id="apiKeyHelp"
+                        style="display: none; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; font-size: 0.8rem; margin-top: 0.5rem; line-height: 1.4;">
+                        <div id="openaiInstructions">
+                            <strong>OpenAI:</strong>
+                            <ol style="margin-left: 1.2rem; margin-top: 0.5rem;">
+                                <li>Go to <a href="https://platform.openai.com/api-keys" target="_blank"
+                                        style="color: var(--primary);">platform.openai.com</a></li>
+                                <li>Log in and click "Create new secret key".</li>
+                                <li>Copy the key starting with <code>sk-...</code></li>
+                            </ol>
+                        </div>
+                        <div id="geminiInstructions" style="display: none;">
+                            <strong>Google Gemini:</strong>
+                            <ol style="margin-left: 1.2rem; margin-top: 0.5rem;">
+                                <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank"
+                                        style="color: var(--primary);">Google AI Studio</a></li>
+                                <li>Click "Create API key".</li>
+                                <li>Copy the key (usually starts with <code>AIza...</code>).</li>
+                            </ol>
+                        </div>
+                        <div id="googleInstructions" style="display: none;">
+                            <strong>Google Translate:</strong>
+                            <ol style="margin-left: 1.2rem; margin-top: 0.5rem;">
+                                <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank"
+                                        style="color: var(--primary);">Google Cloud Console</a></li>
+                                <li>Enable "Cloud Translation API".</li>
+                                <li>Create a standard API Key.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <i data-lucide="globe" class="icon-sm"></i>
+                        Target Language
+                    </label>
+                    <select id="targetLang">
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="it">Italian</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="ja">Japanese</option>
+                        <option value="zh">Chinese</option>
+                    </select>
+                </div>
+
+                <div class="upload-area" id="dropZone">
+                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                    <div class="upload-content">
+                        <i data-lucide="upload-cloud" class="upload-icon"></i>
+                        <h3>Drop PDF here</h3>
+                        <p>or click to browse library</p>
+                    </div>
+                </div>
+
+                <button id="translateBtn" class="btn btn-primary" disabled>
+                    <i data-lucide="sparkles"></i>
+                    <span>Translate PDF</span>
+                </button>
+
+                <button id="downloadBtn" class="btn btn-secondary" style="display: none;">
+                    <i data-lucide="download"></i>
+                    <span>Download Result</span>
+                </button>
+
+                <div class="status-log" id="statusLog"></div>
+            </aside>
+
+            <!-- Preview Area -->
+            <section class="preview-area">
+                <div class="empty-state" id="emptyState">
+                    <i data-lucide="file-search" class="empty-icon"></i>
+                    <h2>No PDF Loaded</h2>
+                    <p>Upload a document to see the magic happen.</p>
+                </div>
+
+                <div id="pdfContainer" class="pdf-container">
+                    <!-- Pages will be rendered here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
