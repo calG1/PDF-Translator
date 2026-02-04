@@ -295,9 +295,9 @@ select:focus {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    max-height: 200px;
-    overflow-y: auto;
-    /* margin-top managed by spacing or flow */
+    /* Removed max-height to allow natural flow within sidebar */
+    /* max-height: 200px; */
+    /* overflow-y: auto; */
 }
 
 .file-item {
@@ -308,8 +308,11 @@ select:focus {
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
     border-radius: 8px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
+    flex-wrap: wrap;
+    /* Allow wrapping for range input row */
 }
 
 .file-item:hover {
@@ -517,6 +520,13 @@ select:focus {
     line-height: 1;
     /* Critical for precise alignment */
     z-index: 10;
+    transition: outline 0.1s, background-color 0.1s;
+}
+
+.text-item:hover {
+    outline: 1px dashed var(--primary);
+    background-color: rgba(255, 255, 255, 0.5);
+    /* Hint it is interactable */
 }
 
 .status-log {

@@ -101,10 +101,10 @@
                         <i data-lucide="scan-line" class="icon-sm" aria-hidden="true"></i>
                         Enable OCR
                         <span style="font-size:0.7em; opacity:0.7; display:block; font-weight:normal;">For scanned
-                            docs</span>
+                            docs (Global)</span>
                     </label>
                     <input type="checkbox" id="ocrToggle" style="width:auto;"
-                        aria-label="Enable OCR for scanned documents">
+                        aria-label="Enable OCR for scanned documents" onchange="saveSettings()">
                 </div>
 
                 <div class="control-group">
@@ -189,10 +189,10 @@
                 </div>
 
                 <div class="upload-area" id="dropZone">
-                    <input type="file" id="fileInput" accept=".pdf" multiple hidden>
+                    <input type="file" id="fileInput" accept=".pdf, .jpg, .jpeg, .png" multiple hidden>
                     <div class="upload-content">
                         <i data-lucide="upload-cloud" class="upload-icon"></i>
-                        <h3>Drop PDF here</h3>
+                        <h3>Drop PDF or Image here</h3>
                         <p>or click to browse library</p>
                     </div>
                 </div>

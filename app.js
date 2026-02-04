@@ -45,11 +45,18 @@ fileInput.addEventListener('change', handleFileSelect);
 translateBtn.addEventListener('click', translateAll);
 downloadBtn.addEventListener('click', downloadAll);
 
-apiKeyInput.addEventListener('change', (e) => state.apiKey = e.target.value);
-targetLangSelect.addEventListener('change', (e) => state.targetLang = e.target.value);
+apiKeyInput.addEventListener('change', (e) => {
+    state.apiKey = e.target.value;
+    saveSettings();
+});
+targetLangSelect.addEventListener('change', (e) => {
+    state.targetLang = e.target.value;
+    saveSettings();
+});
 providerSelect.addEventListener('change', (e) => {
     state.provider = e.target.value;
     updateHelpText();
+    saveSettings();
 });
 
 // Theme Logic
@@ -67,7 +74,42 @@ if (localStorage.getItem('theme') === 'light') {
 }
 
 // Initialize UI state
+loadSettings();
 updateHelpText();
+
+// --- Persistence Helpers ---
+function saveSettings() {
+    const settings = {
+        apiKey: state.apiKey,
+        provider: state.provider,
+        targetLang: state.targetLang,
+        ocr: document.getElementById('ocrToggle').checked
+    };
+    localStorage.setItem('pdf_translator_settings', JSON.stringify(settings));
+}
+
+function loadSettings() {
+    const saved = localStorage.getItem('pdf_translator_settings');
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            if (settings.apiKey) state.apiKey = settings.apiKey;
+            if (settings.provider) {
+                state.provider = settings.provider;
+                providerSelect.value = settings.provider;
+            }
+            if (settings.targetLang) {
+                state.targetLang = settings.targetLang;
+                targetLangSelect.value = settings.targetLang;
+            }
+            if (settings.ocr !== undefined) {
+                document.getElementById('ocrToggle').checked = settings.ocr;
+            }
+        } catch (e) {
+            console.error("Failed to load settings", e);
+        }
+    }
+}
 
 helpBtn.addEventListener('click', () => {
     const isVisible = apiKeyHelp.style.display === 'block';
@@ -134,31 +176,75 @@ function addFiles(files) {
     let addedCount = 0;
     const globalOCRParams = document.getElementById('ocrToggle').checked;
 
-    Array.from(files).forEach(file => {
-        if (file.type === 'application/pdf') {
+    Array.from(files).forEach(async file => {
+        let fileToProcess = file;
+        let isImage = false;
+
+        if (file.type.startsWith('image/')) {
+            try {
+                fileToProcess = await imageToPdf(file);
+                isImage = true;
+            } catch (e) {
+                console.error("Image conversion failed", e);
+                return;
+            }
+        }
+
+        if (fileToProcess.type === 'application/pdf') {
             const id = Date.now() + Math.random().toString(36).substr(2, 9);
             const doc = {
                 id,
-                file,
-                filename: file.name,
+                file: fileToProcess,
+                filename: file.name, // Keep original name even if converted
                 status: 'queued',
                 pdfDoc: null,
-                pages: [], // Will hold { original, translated, x, y, w, h, fontSize, fontFamily, color, bg }
+                pages: [],
                 pageCount: 0,
-                useOCR: globalOCRParams // Init with global setting
+                // Force OCR for images as they have no text layer
+                useOCR: isImage ? true : globalOCRParams
             };
             state.documents.push(doc);
             addedCount++;
+
+            // Always trigger UI update and queue
+            if (state.documents.length > 0) {
+                emptyState.style.display = 'none';
+            }
+            updateFileListUI();
+            processQueue();
         }
     });
+}
 
-    if (addedCount > 0) {
-        emptyState.style.display = 'none';
-        updateFileListUI();
-        processQueue(); // Start processing
-    } else {
-        alert('Please select valid PDF files.');
-    }
+async function imageToPdf(imageFile) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                if (!window.jspdf) {
+                    reject(new Error("jsPDF library not loaded"));
+                    return;
+                }
+                const { jsPDF } = window.jspdf;
+                // Calculate PDF format; use pixels to match 1:1 for OCR mapping simplicity
+                const pdf = new jsPDF({
+                    orientation: img.width > img.height ? 'l' : 'p',
+                    unit: 'px',
+                    format: [img.width, img.height]
+                });
+                pdf.addImage(img, 'JPEG', 0, 0, img.width, img.height);
+                const blob = pdf.output('blob');
+                // Create a mimic File object
+                const newFile = new File([blob], imageFile.name + ".pdf", { type: 'application/pdf' });
+                resolve(newFile);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+    });
 }
 
 function setActiveDocument(id) {
@@ -208,11 +294,18 @@ function updateFileListUI() {
                     <span class="file-status">${statusText}</span>
                 </div>
             </div>
-            <div style="display:flex; align-items:center;">
-                ${ocrBtn}
                 <div class="file-remove" onclick="removeDocument('${doc.id}', event)">
                     <i data-lucide="x" style="width:14px; height:14px;"></i>
                 </div>
+            </div>
+            <div class="file-range" onclick="event.stopPropagation()" style="margin-top: 0.5rem; width: 100%; display: flex; align-items: center; gap: 0.5rem;">
+                <label style="font-size: 0.7rem; color: var(--text-muted);">Pages:</label>
+                <input type="text" 
+                    placeholder="All (e.g. 1-3, 5)" 
+                    value="${doc.pageRange || ''}"
+                    onchange="updatePageRange('${doc.id}', this.value)"
+                    style="flex: 1; padding: 0.2rem 0.5rem; font-size: 0.75rem; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-main);"
+                />
             </div>
         `;
         fileList.appendChild(item);
@@ -260,6 +353,37 @@ function removeDocument(id, e) {
         }
     }
     updateFileListUI();
+    updateFileListUI();
+}
+
+function updatePageRange(id, value) {
+    const doc = state.documents.find(d => d.id === id);
+    if (doc) {
+        doc.pageRange = value;
+    }
+}
+
+function parsePageRange(rangeStr, maxPages) {
+    if (!rangeStr || !rangeStr.trim()) {
+        return Array.from({ length: maxPages }, (_, i) => i + 1);
+    }
+    const pages = new Set();
+    const parts = rangeStr.split(',');
+    parts.forEach(part => {
+        const p = part.trim();
+        if (p.includes('-')) {
+            const [start, end] = p.split('-').map(num => parseInt(num));
+            if (!isNaN(start) && !isNaN(end)) {
+                for (let i = start; i <= end; i++) {
+                    if (i >= 1 && i <= maxPages) pages.add(i);
+                }
+            }
+        } else {
+            const num = parseInt(p);
+            if (!isNaN(num) && num >= 1 && num <= maxPages) pages.add(num);
+        }
+    });
+    return Array.from(pages).sort((a, b) => a - b);
 }
 
 // --- Batch Processing Queue ---
@@ -485,6 +609,43 @@ async function renderActiveDocumentView() {
             if (item.translated) {
                 fitText(el, item.w, item.fontSize);
             }
+
+            // --- Editable Logic ---
+            el.contentEditable = true;
+            el.spellcheck = false; // Optional: disable spellcheck underlines
+
+            // Highlight on focus
+            el.addEventListener('focus', () => {
+                el.style.zIndex = '100';
+                el.style.outline = '2px dashed var(--primary)';
+                el.style.backgroundColor = 'rgba(255, 255, 255, 0.9)'; // Ensure visibility
+                el.style.minWidth = `${item.w}px`; // Allow expansion
+                el.style.width = 'auto';
+            });
+
+            // Save on blur
+            el.addEventListener('blur', () => {
+                el.style.zIndex = '10';
+                el.style.outline = 'none';
+                el.style.backgroundColor = item.isOCR ? 'transparent' : 'white';
+                // Revert to transparent/white logic. 
+                // Actually, if it's OCR, we masked it with canvas fillRect, so el is transparent.
+                // If native, el is opaque white to cover original.
+
+                // Update Model
+                item.translated = el.textContent;
+
+                // Re-fit text
+                fitText(el, item.w, item.fontSize);
+            });
+
+            // Prevent newlines on Enter
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    el.blur();
+                }
+            });
         });
     }
 }
@@ -540,7 +701,14 @@ async function translateAll() {
             log(`Translating ${doc.filename}...`);
 
             const totalPages = doc.pages.length;
+            const allowedPages = parsePageRange(doc.pageRange, totalPages);
+
             for (let i = 0; i < totalPages; i++) {
+                // Check if page is in range (1-based index check)
+                if (!allowedPages.includes(i + 1)) {
+                    continue;
+                }
+
                 // Update Progress
                 progressStatusText.textContent = `Translating ${doc.filename} (${i + 1}/${totalPages})...`;
                 // Global progress could be fancier, but let's do per-doc for now visually or mixed?
