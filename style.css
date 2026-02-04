@@ -545,3 +545,95 @@ select:focus {
         transform: rotate(360deg);
     }
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    body {
+        padding: 0;
+        align-items: flex-start;
+        /* Allow scroll on mobile */
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .background-blobs {
+        opacity: 0.4;
+        /* Reduce distraction on small screens */
+    }
+
+    .app-container {
+        height: auto;
+        min-height: 100vh;
+        border-radius: 0;
+        border: none;
+        max-width: 100%;
+        box-shadow: none;
+    }
+
+    header {
+        padding: 1rem;
+        position: sticky;
+        top: 0;
+        background: var(--glass-bg);
+        z-index: 50;
+        backdrop-filter: blur(16px);
+    }
+
+    main {
+        flex-direction: column;
+        overflow: visible;
+        /* Let the page scroll naturally */
+    }
+
+    .controls-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.5rem;
+        overflow-y: visible;
+    }
+
+    .preview-area {
+        padding: 1rem;
+        min-height: 500px;
+        /* Ensure visible area for PDF */
+        overflow-y: visible;
+    }
+
+    .preview-area .pdf-container {
+        width: 100%;
+    }
+
+    .page-wrapper {
+        /* max-width: 100%; Removed to fix text layer alignment. Allow horizontal scroll instead. */
+        height: auto !important;
+    }
+
+    .page-wrapper canvas {
+        /* width: 100% !important; Removed to prevent canvas shrinking while text stays fixed */
+        height: auto !important;
+    }
+
+    /* Adjust text layer scaling for mobile if using CSS transform */
+    .text-layer {
+        /* This is tricky. Text layer uses absolute positioning based on original PDF points.
+           If we scale the canvas via CSS, the text layer won't match unless we scale it too.
+           For a simple mobile view without JS refactor, we might just let it scroll horizontally 
+           or fit-content. For now, let's allow horizontal scroll in preview area if content is too wide. */
+    }
+
+    .preview-area {
+        align-items: flex-start;
+        justify-content: flex-start;
+        overflow-x: auto;
+    }
+
+    .empty-state {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+    }
+}

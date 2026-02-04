@@ -66,6 +66,9 @@ if (localStorage.getItem('theme') === 'light') {
     themeIcon.setAttribute('data-lucide', 'sun');
 }
 
+// Initialize UI state
+updateHelpText();
+
 helpBtn.addEventListener('click', () => {
     const isVisible = apiKeyHelp.style.display === 'block';
     apiKeyHelp.style.display = isVisible ? 'none' : 'block';
@@ -79,7 +82,7 @@ function updateHelpText() {
 
     apiKeyInput.disabled = false;
     apiKeyInput.placeholder = "Paste your API key here";
-    if (state.apiKey) apiKeyInput.value = state.apiKey;
+    apiKeyInput.value = state.apiKey;
 
     if (state.provider === 'openai') {
         openaiInstructions.style.display = 'block';
@@ -88,11 +91,19 @@ function updateHelpText() {
     } else if (state.provider === 'google') {
         googleInstructions.style.display = 'block';
     } else {
+        // Free mode
         apiKeyHelp.style.display = 'none';
         apiKeyInput.disabled = true;
-        apiKeyInput.value = '';
-        apiKeyInput.placeholder = "✅ No API Key required for Free Mode";
+        apiKeyInput.type = "text"; // Show text clearly
+        apiKeyInput.value = "✅ No API Key required for Free Mode";
+        apiKeyInput.placeholder = "";
+        helpBtn.style.display = 'none'; // Hide the "Where do I get this?" button
+        return;
     }
+
+    // Reset for non-free
+    helpBtn.style.display = 'block';
+    apiKeyInput.type = "password";
 }
 
 function log(msg) {
